@@ -309,3 +309,39 @@ void print_room_description(Room* room) {
     }
 }
 
+bool handle_monster_encounter(Dungeon* dungeon) {
+    Room* current = dungeon->rooms[dungeon->player.current_room_id];
+    
+    if (current->content.type != MONSTER || current->cleared) {
+        printf("Er is hier geen monster om tegen te vechten!\n");
+        return true;
+    }
+
+    Monster* monster = current->content.content.monster;
+    printf("Je wordt aangevallen door een %s (HP: %d, Damage: %d)!\n", 
+           monster->name, monster->hp, monster->damage);
+
+    while (dungeon->player.hp > 0 && monster->hp > 0) {
+        // Speler aanval
+        monster->hp -= dungeon->player.damage;
+        printf("Je valt aan en doet %d schade. %s HP: %d\n", 
+               dungeon->player.damage, monster->name, monster->hp > 0 ? monster->hp : 0);
+
+        if (monster->hp <= 0) {
+            printf("Je hebt de %s verslagen!\n", monster->name);
+            current->cleared = true;
+            return true;
+        }
+
+        // Monster aanval
+        dungeon->player.hp -= monster->damage;
+        printf("De %s valt aan en doet %d schade. Jouw HP: %d/%d\n", 
+               monster->name, monster->damage, dungeon->player.hp, dungeon->player.max_hp);
+
+        if (dungeon->player.hp <= 0) {
+            printf("Je bent verslagen... Game Over!\n");
+            return false;
+        }
+    }
+    return true;
+}
