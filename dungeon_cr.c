@@ -16,13 +16,18 @@ typedef enum {
 // Enum voor monster types
 typedef enum {
     GOBLIN,
-    SKELETON
+    SKELETON,
+    MAX_MONSTER_TYPES
 } MonsterType;
 
 // Enum voor item types
 typedef enum {
-    HEALTH_POTION,
-    POWER_GLOVE
+    HEALTH_POTION_SMALL,
+    HEALTH_POTION_MEDIUM,
+    HEALTH_POTION_LARGE,
+    POWER_GLOVE,
+    MAGIC_AMULET,
+    MAX_ITEM_TYPES
 } ItemType;
 
 // Struct voor een monster
@@ -76,6 +81,7 @@ typedef struct {
     int num_rooms;
     Player player;
 } Dungeon;
+
 // Functieprototypes
 Room* create_room(int id, int max_doors);
 void connect_rooms(Room* room1, Room* room2);
@@ -92,3 +98,85 @@ void free_dungeon(Dungeon* dungeon);
 int get_user_input(const char* prompt, int min, int max);
 Monster* create_monster(MonsterType type);
 Item* create_item(ItemType type);
+
+// Implementatie
+Room* create_room(int id, int max_doors) {
+    Room* room = (Room*)malloc(sizeof(Room));
+    room->id = id;
+    room->num_doors = 0;
+    room->max_doors = max_doors;
+    room->doors = (Room**)malloc(max_doors * sizeof(Room*));
+    room->content.type = EMPTY;
+    room->visited = false;
+    room->cleared = false;
+    return room;
+}
+
+Monster* create_monster(MonsterType type) {
+    Monster* monster = (Monster*)malloc(sizeof(Monster));
+    monster->type = type;
+    
+    switch(type) {
+        case GOBLIN:
+            monster->hp = 30 + rand() % 20;
+            monster->damage = 5 + rand() % 5;
+            monster->name = "Goblin";
+            break;
+        case SKELETON:
+            monster->hp = 20 + rand() % 15;
+            monster->damage = 8 + rand() % 7;
+            monster->name = "Skeleton";
+            break;
+        default:
+            monster->hp = 25 + rand() % 20;
+            monster->damage = 6 + rand() % 6;
+            monster->name = "Monster";
+    }
+    return monster;
+}
+
+Item* create_item() {
+    Item* item = (Item*)malloc(sizeof(Item));
+    item->type = rand() % MAX_ITEM_TYPES;
+    
+    switch(item->type) {
+        case HEALTH_POTION_SMALL:
+            item->value = 5 + rand() % 6;  // 5-10 HP
+            item->name = "Kleine Health Potion";
+            break;
+        case HEALTH_POTION_MEDIUM:
+            item->value = 10 + rand() % 11; // 10-20 HP
+            item->name = "Medium Health Potion";
+            break;
+        case HEALTH_POTION_LARGE:
+            item->value = 20 + rand() % 16; // 20-35 HP
+            item->name = "Grote Health Potion";
+            break;
+        case POWER_GLOVE:
+            item->value = 3 + rand() % 4;   // +3-6 damage
+            item->name = "Power Glove";
+            break;
+        case MAGIC_AMULET:
+            item->value = 1 + rand() % 10;  // +1-10 max HP
+            item->name = "Magisch Amulet";
+            break;
+    }
+    return item;
+}
+
+void connect_rooms(Room* room1, Room* room2) {
+    if (room1->num_doors < room1->max_doors && 
+        room2->num_doors < room2->max_doors) {
+        room1->doors[room1->num_doors++] = room2;
+        room2->doors[room2->num_doors++] = room1;
+    }
+}
+
+bool is_already_connected(Room* room1, Room* room2) {
+    for (int i = 0; i < room1->num_doors; i++) {
+        if (room1->doors[i] == room2) {
+            return true;
+        }
+    }
+    return false;
+}
