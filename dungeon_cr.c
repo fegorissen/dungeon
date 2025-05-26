@@ -88,7 +88,7 @@ void connect_rooms(Room* room1, Room* room2);
 bool is_already_connected(Room* room1, Room* room2);
 Dungeon* generate_dungeon(int num_rooms);
 void populate_rooms(Dungeon* dungeon);
-void print_room_description(Room* room);
+void print_room_contents(Room* room);
 bool handle_monster_encounter(Dungeon* dungeon);
 void handle_item_pickup(Dungeon* dungeon);
 void print_player_status(Player* player);
@@ -98,6 +98,9 @@ void free_dungeon(Dungeon* dungeon);
 int get_user_input(const char* prompt, int min, int max);
 Monster* create_monster(MonsterType type);
 Item* create_item();
+void print_move(int room_id);
+void print_attack_sequence(int pattern);
+void print_hp_loss(const char* name, int damage, int current_hp, int max_hp);
 
 // Implementatie
 Room* create_room(int id, int max_doors) {
@@ -141,23 +144,23 @@ Item* create_item() {
     
     switch(item->type) {
         case HEALTH_POTION_SMALL:
-            item->value = 5 + rand() % 6;  // 5-10 HP
+            item->value = 5 + rand() % 6;
             item->name = "Kleine Health Potion";
             break;
         case HEALTH_POTION_MEDIUM:
-            item->value = 10 + rand() % 11; // 10-20 HP
+            item->value = 10 + rand() % 11;
             item->name = "Medium Health Potion";
             break;
         case HEALTH_POTION_LARGE:
-            item->value = 20 + rand() % 16; // 20-35 HP
+            item->value = 20 + rand() % 16;
             item->name = "Grote Health Potion";
             break;
         case POWER_GLOVE:
-            item->value = 3 + rand() % 4;   // +3-6 damage
+            item->value = 3 + rand() % 4;
             item->name = "Power Glove";
             break;
         case MAGIC_AMULET:
-            item->value = 1 + rand() % 10;  // +1-10 max HP
+            item->value = 1 + rand() % 10;
             item->name = "Magisch Amulet";
             break;
     }
@@ -188,7 +191,6 @@ Dungeon* generate_dungeon(int num_rooms) {
     dungeon->num_rooms = num_rooms;
     dungeon->rooms = (Room**)malloc(num_rooms * sizeof(Room*));
 
-    // Maak kamers met 1-4 deuren
     for (int i = 0; i < num_rooms; i++) {
         int max_doors = 1 + rand() % 4;
         dungeon->rooms[i] = create_room(i, max_doors);
@@ -196,20 +198,17 @@ Dungeon* generate_dungeon(int num_rooms) {
 
     dungeon->entrance = dungeon->rooms[0];
     
-    // Initialiseer speler
     dungeon->player.current_room_id = 0;
     dungeon->player.hp = 100;
     dungeon->player.max_hp = 100;
     dungeon->player.damage = 10 + rand() % 10;
     dungeon->player.has_treasure = false;
 
-    // Verbind kamers in een boomstructuur
     for (int i = 1; i < num_rooms; i++) {
         int parent_idx = rand() % i;
         connect_rooms(dungeon->rooms[parent_idx], dungeon->rooms[i]);
     }
 
-    // Voeg extra verbindingen toe
     for (int i = 0; i < num_rooms; i++) {
         Room* current = dungeon->rooms[i];
         int remaining_doors = current->max_doors - current->num_doors;
@@ -232,18 +231,15 @@ Dungeon* generate_dungeon(int num_rooms) {
 }
 
 void populate_rooms(Dungeon* dungeon) {
-    // Eerst alle kamers resetten (behalve startkamer)
     for (int i = 1; i < dungeon->num_rooms; i++) {
         dungeon->rooms[i]->content.type = EMPTY;
         dungeon->rooms[i]->cleared = false;
     }
 
-    // Plaats de schat in een willekeurige kamer (niet startkamer)
     int treasure_room = 1 + rand() % (dungeon->num_rooms - 1);
     dungeon->rooms[treasure_room]->content.type = TREASURE;
     dungeon->rooms[treasure_room]->cleared = false;
 
-    // Plaats minstens 1 monster in een andere kamer
     int monster_room;
     do {
         monster_room = 1 + rand() % (dungeon->num_rooms - 1);
@@ -253,95 +249,114 @@ void populate_rooms(Dungeon* dungeon) {
     dungeon->rooms[monster_room]->content.content.monster = create_monster(rand() % MAX_MONSTER_TYPES);
     dungeon->rooms[monster_room]->cleared = false;
 
-    // Vul de rest van de kamers random in
     for (int i = 1; i < dungeon->num_rooms; i++) {
         if (i == treasure_room || i == monster_room) continue;
 
         int rand_val = rand() % 100;
-        if (rand_val < 40) {  // 40% kans op monster
+        if (rand_val < 40) {
             dungeon->rooms[i]->content.type = MONSTER;
             dungeon->rooms[i]->content.content.monster = create_monster(rand() % MAX_MONSTER_TYPES);
         } 
-        else if (rand_val < 75) {  // 35% kans op item
+        else if (rand_val < 75) {
             dungeon->rooms[i]->content.type = ITEM;
             dungeon->rooms[i]->content.content.item = create_item();
         }
-        // 25% kans blijft leeg
     }
 }
 
-void print_room_description(Room* room) {
-    printf("\n=== Kamer %d ===\n", room->id);
-    
-    if (!room->visited) {
-        printf("Je betreedt deze kamer voor het eerst.\n");
-        room->visited = true;
-    }
+void print_move(int room_id) {
+    printf("De held gaat naar kamer %d\n", room_id);
+}
 
+void print_room_contents(Room* room) {
     switch(room->content.type) {
         case MONSTER:
             if (!room->cleared) {
-                printf("Er staat een %s klaar om aan te vallen! (HP: %d, Damage: %d)\n", 
-                       room->content.content.monster->name,
-                       room->content.content.monster->hp,
-                       room->content.content.monster->damage);
+                printf("Er is een %s in de kamer\n", room->content.content.monster->name);
             } else {
-                printf("Het dode lichaam van een %s ligt hier.\n",
-                       room->content.content.monster->name);
+                printf("Het lijk van een %s ligt op de grond\n", room->content.content.monster->name);
             }
             break;
         case ITEM:
             if (!room->cleared) {
-                printf("Je ziet een %s op de grond.\n",
-                       room->content.content.item->name);
+                printf("Er ligt een %s op de grond\n", room->content.content.item->name);
             } else {
-                printf("Deze kamer is leeg.\n");
+                printf("De kamer is leeg\n");
             }
             break;
         case TREASURE:
             if (!room->cleared) {
-                printf("De schat ligt hier glinsterend in het midden van de kamer!\n");
+                printf("De schat ligt hier!\n");
             } else {
-                printf("De schatkist staat hier open en leeg.\n");
+                printf("De lege schatkist staat hier\n");
             }
             break;
         default:
-            printf("Deze kamer is leeg.\n");
+            printf("De kamer is leeg\n");
     }
+}
+
+void print_doors(Room* room) {
+    printf("De kamer heeft deuren naar: ");
+    for (int i = 0; i < room->num_doors; i++) {
+        printf("%d", room->doors[i]->id);
+        if (i < room->num_doors - 1) {
+            printf(", ");
+        }
+    }
+    printf("\n");
+}
+
+void print_attack_sequence(int pattern) {
+    printf("Aanval volgorde: ");
+    for (int i = 3; i >= 0; i--) {
+        printf("%d", (pattern >> i) & 1);
+    }
+    printf("\n");
+}
+
+void print_hp_loss(const char* name, int damage, int current_hp, int max_hp) {
+    printf("%s verliest %d hp (%d/%d)\n", name, damage, current_hp, max_hp);
 }
 
 bool handle_monster_encounter(Dungeon* dungeon) {
     Room* current = dungeon->rooms[dungeon->player.current_room_id];
-    
-    if (current->content.type != MONSTER || current->cleared) {
-        printf("Er is hier geen monster om tegen te vechten!\n");
-        return true;
-    }
-
     Monster* monster = current->content.content.monster;
-    printf("Je wordt aangevallen door een %s (HP: %d, Damage: %d)!\n", 
-           monster->name, monster->hp, monster->damage);
 
     while (dungeon->player.hp > 0 && monster->hp > 0) {
-        // Speler aanval
-        monster->hp -= dungeon->player.damage;
-        printf("Je valt aan en doet %d schade. %s HP: %d\n", 
-               dungeon->player.damage, monster->name, monster->hp > 0 ? monster->hp : 0);
+        int attack_pattern = rand() % 16;
+        print_attack_sequence(attack_pattern);
 
-        if (monster->hp <= 0) {
-            printf("Je hebt de %s verslagen!\n", monster->name);
-            current->cleared = true;
-            return true;
+        for (int i = 0; i < 4; i++) {
+            if (dungeon->player.hp <= 0 || monster->hp <= 0) break;
+
+            if ((attack_pattern >> (3 - i)) & 1) {
+                monster->hp -= dungeon->player.damage;
+                print_hp_loss(monster->name, dungeon->player.damage, 
+                             monster->hp > 0 ? monster->hp : 0, 
+                             monster->hp + dungeon->player.damage);
+                
+                if (monster->hp <= 0) {
+                    printf("%s sterft (%d/%d)\n", monster->name, 0, monster->hp + dungeon->player.damage);
+                    current->cleared = true;
+                    return true;
+                }
+            } else {
+                dungeon->player.hp -= monster->damage;
+                print_hp_loss("de held", monster->damage, 
+                             dungeon->player.hp > 0 ? dungeon->player.hp : 0, 
+                             dungeon->player.max_hp);
+                
+                if (dungeon->player.hp <= 0) {
+                    printf("De held sterft... Game Over!\n");
+                    return false;
+                }
+            }
         }
 
-        // Monster aanval
-        dungeon->player.hp -= monster->damage;
-        printf("De %s valt aan en doet %d schade. Jouw HP: %d/%d\n", 
-               monster->name, monster->damage, dungeon->player.hp, dungeon->player.max_hp);
-
-        if (dungeon->player.hp <= 0) {
-            printf("Je bent verslagen... Game Over!\n");
-            return false;
+        if (dungeon->player.hp > 0 && monster->hp > 0) {
+            printf("Druk op enter om door te gaan...");
+            getchar(); getchar();
         }
     }
     return true;
@@ -410,33 +425,25 @@ void print_player_status(Player* player) {
     }
 }
 
-void print_doors(Room* room) {
-    printf("\nDeuren naar: ");
-    for (int i = 0; i < room->num_doors; i++) {
-        printf("%d ", room->doors[i]->id);
-    }
-    printf("\n");
-}
-
 void move_player(Dungeon* dungeon) {
     Room* current = dungeon->rooms[dungeon->player.current_room_id];
     print_doors(current);
     
-    int target = get_user_input("Naar welke kamer wil je gaan? ", 0, dungeon->num_rooms - 1);
+    printf("Kies een deur: ");
+    int target = get_user_input("", 0, dungeon->num_rooms - 1);
     
     for (int i = 0; i < current->num_doors; i++) {
         if (current->doors[i]->id == target) {
             dungeon->player.current_room_id = target;
-            printf("Je gaat naar kamer %d.\n", target);
+            print_move(target);
             
-            // Toon nieuwe kamer beschrijving
-            print_room_description(dungeon->rooms[target]);
+            Room* new_room = dungeon->rooms[target];
+            print_room_contents(new_room);
+            print_doors(new_room);
             
-            // Start gevecht als er een monster is
-            if (dungeon->rooms[target]->content.type == MONSTER && 
-                !dungeon->rooms[target]->cleared) {
+            if (new_room->content.type == MONSTER && !new_room->cleared) {
                 if (!handle_monster_encounter(dungeon)) {
-                    return; // Game over
+                    return;
                 }
             }
             return;
@@ -462,15 +469,6 @@ int get_user_input(const char* prompt, int min, int max) {
         }
         printf("Ongeldige keuze. Kies tussen %d en %d.\n", min, max);
     }
-}
-
-void print_main_menu() {
-    printf("\n=== Hoofdmenu ===\n");
-    printf("1. Verplaatsen\n");
-    printf("2. Ruim kamer op (vechten/items pakken)\n");
-    printf("3. Status bekijken\n");
-    printf("4. Schat pakken (als gevonden)\n");
-    printf("5. Stoppen\n");
 }
 
 void free_dungeon(Dungeon* dungeon) {
@@ -501,12 +499,18 @@ int main() {
     Dungeon* dungeon = generate_dungeon(num_rooms);
     populate_rooms(dungeon);
     
-    // Toon startkamer
-    print_room_description(dungeon->entrance);
+    printf("De held start in kamer 0\n");
+    print_room_contents(dungeon->entrance);
+    print_doors(dungeon->entrance);
     
     bool playing = true;
     while (playing && dungeon->player.hp > 0 && !dungeon->player.has_treasure) {
-        print_main_menu();
+        printf("\n1. Verplaatsen\n");
+        printf("2. Ruim kamer op\n");
+        printf("3. Status bekijken\n");
+        printf("4. Schat pakken\n");
+        printf("5. Stoppen\n");
+        
         int choice = get_user_input("Wat wil je doen? ", 1, 5);
         
         switch(choice) {
