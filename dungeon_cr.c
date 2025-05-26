@@ -312,7 +312,7 @@ void print_attack_sequence(int pattern) {
     for (int i = 3; i >= 0; i--) {
         printf("%d", (pattern >> i) & 1);
     }
-    printf("\n");
+    printf(" (0 = monster valt aan, 1 = speler valt aan)\n");
 }
 
 void print_hp_loss(const char* name, int damage, int current_hp, int max_hp) {
@@ -323,38 +323,53 @@ bool handle_monster_encounter(Dungeon* dungeon) {
     Room* current = dungeon->rooms[dungeon->player.current_room_id];
     Monster* monster = current->content.content.monster;
 
+    printf("\n=== Gevecht met %s ===\n", monster->name);
+    printf("Jouw HP: %d/%d, Damage: %d\n", dungeon->player.hp, dungeon->player.max_hp, dungeon->player.damage);
+    printf("%s HP: %d, Damage: %d\n\n", monster->name, monster->hp, monster->damage);
+
     while (dungeon->player.hp > 0 && monster->hp > 0) {
+        // Genereer random getal 0-15 en converteer naar 4-bit binaire vorm
         int attack_pattern = rand() % 16;
         print_attack_sequence(attack_pattern);
 
-        for (int i = 0; i < 4; i++) {
+        // Loop door elke bit (van hoog naar laag)
+        for (int i = 3; i >= 0; i--) {
             if (dungeon->player.hp <= 0 || monster->hp <= 0) break;
 
-            if ((attack_pattern >> (3 - i)) & 1) {
+            if ((attack_pattern >> i) & 1) {
+                // Bit is 1: speler valt aan
                 monster->hp -= dungeon->player.damage;
+                printf("Jij valt de %s aan voor %d schade!\n", 
+                       monster->name, dungeon->player.damage);
                 print_hp_loss(monster->name, dungeon->player.damage, 
                              monster->hp > 0 ? monster->hp : 0, 
                              monster->hp + dungeon->player.damage);
                 
                 if (monster->hp <= 0) {
-                    printf("%s sterft (%d/%d)\n", monster->name, 0, monster->hp + dungeon->player.damage);
+                    printf("%s is verslagen!\n", monster->name);
                     current->cleared = true;
                     return true;
                 }
             } else {
+                // Bit is 0: monster valt aan
                 dungeon->player.hp -= monster->damage;
-                print_hp_loss("de held", monster->damage, 
+                printf("%s valt jou aan voor %d schade!\n", 
+                       monster->name, monster->damage);
+                print_hp_loss("Jij", monster->damage, 
                              dungeon->player.hp > 0 ? dungeon->player.hp : 0, 
                              dungeon->player.max_hp);
                 
                 if (dungeon->player.hp <= 0) {
-                    printf("De held sterft... Game Over!\n");
+                    printf("Je bent verslagen... Game Over!\n");
                     return false;
                 }
             }
         }
 
         if (dungeon->player.hp > 0 && monster->hp > 0) {
+            printf("\n=== Status na ronde ===\n");
+            printf("Jouw HP: %d/%d\n", dungeon->player.hp, dungeon->player.max_hp);
+            printf("%s HP: %d\n\n", monster->name, monster->hp);
             printf("Druk op enter om door te gaan...");
             getchar(); getchar();
         }
@@ -439,7 +454,6 @@ void move_player(Dungeon* dungeon) {
             
             Room* new_room = dungeon->rooms[target];
             print_room_contents(new_room);
-            print_doors(new_room);
             
             if (new_room->content.type == MONSTER && !new_room->cleared) {
                 if (!handle_monster_encounter(dungeon)) {
@@ -499,7 +513,7 @@ int main() {
     Dungeon* dungeon = generate_dungeon(num_rooms);
     populate_rooms(dungeon);
     
-    printf("De held start in kamer 0\n");
+    printf("\nDe held start in kamer 0\n");
     print_room_contents(dungeon->entrance);
     print_doors(dungeon->entrance);
     
