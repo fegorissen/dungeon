@@ -415,3 +415,57 @@ void print_doors(Room* room) {
     printf("\n");
 }
 
+void move_player(Dungeon* dungeon) {
+    Room* current = dungeon->rooms[dungeon->player.current_room_id];
+    print_doors(current);
+    
+    int target = get_user_input("Naar welke kamer wil je gaan? ", 0, dungeon->num_rooms - 1);
+    
+    for (int i = 0; i < current->num_doors; i++) {
+        if (current->doors[i]->id == target) {
+            dungeon->player.current_room_id = target;
+            printf("Je gaat naar kamer %d.\n", target);
+            
+            // Toon nieuwe kamer beschrijving
+            print_room_description(dungeon->rooms[target]);
+            
+            // Start gevecht als er een monster is
+            if (dungeon->rooms[target]->content.type == MONSTER && 
+                !dungeon->rooms[target]->cleared) {
+                if (!handle_monster_encounter(dungeon)) {
+                    return; // Game over
+                }
+            }
+            return;
+        }
+    }
+    printf("Er is geen deur naar die kamer!\n");
+}
+
+int get_user_input(const char* prompt, int min, int max) {
+    int input;
+    char ch;
+    while (1) {
+        printf("%s", prompt);
+        if (scanf("%d", &input) != 1) {
+            while ((ch = getchar()) != '\n' && ch != EOF);
+            printf("Voer een nummer in tussen %d en %d.\n", min, max);
+            continue;
+        }
+        while ((ch = getchar()) != '\n' && ch != EOF);
+        
+        if (input >= min && input <= max) {
+            return input;
+        }
+        printf("Ongeldige keuze. Kies tussen %d en %d.\n", min, max);
+    }
+}
+
+void print_main_menu() {
+    printf("\n=== Hoofdmenu ===\n");
+    printf("1. Verplaatsen\n");
+    printf("2. Ruim kamer op (vechten/items pakken)\n");
+    printf("3. Status bekijken\n");
+    printf("4. Schat pakken (als gevonden)\n");
+    printf("5. Stoppen\n");
+}
