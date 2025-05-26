@@ -345,3 +345,43 @@ bool handle_monster_encounter(Dungeon* dungeon) {
     }
     return true;
 }
+void handle_item_pickup(Dungeon* dungeon) {
+    Room* current = dungeon->rooms[dungeon->player.current_room_id];
+    
+    if (current->content.type != ITEM || current->cleared) {
+        printf("Er is hier niets om op te rapen!\n");
+        return;
+    }
+
+    Item* item = current->content.content.item;
+    
+    switch(item->type) {
+        case HEALTH_POTION_SMALL:
+        case HEALTH_POTION_MEDIUM:
+        case HEALTH_POTION_LARGE:
+            dungeon->player.hp += item->value;
+            if (dungeon->player.hp > dungeon->player.max_hp) {
+                dungeon->player.hp = dungeon->player.max_hp;
+            }
+            printf("Je gebruikt de %s en herstelt %d HP. Jouw HP: %d/%d\n",
+                   item->name, item->value, dungeon->player.hp, dungeon->player.max_hp);
+            break;
+            
+        case POWER_GLOVE:
+            dungeon->player.damage += item->value;
+            printf("Je trekt de %s aan en krijgt +%d damage. Jouw damage: %d\n",
+                   item->name, item->value, dungeon->player.damage);
+            break;
+            
+        case MAGIC_AMULET:
+            dungeon->player.max_hp += item->value;
+            dungeon->player.hp += item->value;
+            printf("Je draagt nu het %s en krijgt +%d max HP. Jouw HP: %d/%d\n",
+                   item->name, item->value, dungeon->player.hp, dungeon->player.max_hp);
+            break;
+    }
+    
+    current->cleared = true;
+    free(item);
+    current->content.type = EMPTY;
+}
