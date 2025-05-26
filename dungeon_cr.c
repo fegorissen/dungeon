@@ -76,3 +76,19 @@ typedef struct {
     int num_rooms;
     Player player;
 } Dungeon;
+// Functieprototypes
+Room* create_room(int id, int max_doors);
+void connect_rooms(Room* room1, Room* room2);
+bool is_already_connected(Room* room1, Room* room2);
+Dungeon* generate_dungeon(int num_rooms);
+void populate_rooms(Dungeon* dungeon);
+void print_room_description(Room* room);
+bool handle_monster_encounter(Dungeon* dungeon);
+void handle_item_pickup(Dungeon* dungeon);
+void print_player_status(Player* player);
+void print_doors(Room* room);
+void move_player(Dungeon* dungeon);
+void free_dungeon(Dungeon* dungeon);
+int get_user_input(const char* prompt, int min, int max);
+Monster* create_monster(MonsterType type);
+Item* create_item(ItemType type);
