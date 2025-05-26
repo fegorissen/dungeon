@@ -385,3 +385,33 @@ void handle_item_pickup(Dungeon* dungeon) {
     free(item);
     current->content.type = EMPTY;
 }
+void handle_treasure(Dungeon* dungeon) {
+    Room* current = dungeon->rooms[dungeon->player.current_room_id];
+    
+    if (current->content.type == TREASURE && !current->cleared) {
+        printf("Je hebt de schat gevonden! Gefeliciteerd, je wint!\n");
+        dungeon->player.has_treasure = true;
+        current->cleared = true;
+    } else {
+        printf("Er is hier geen schat.\n");
+    }
+}
+
+void print_player_status(Player* player) {
+    printf("\n=== Speler Status ===\n");
+    printf("HP: %d/%d\n", player->hp, player->max_hp);
+    printf("Damage: %d\n", player->damage);
+    printf("Huidige kamer: %d\n", player->current_room_id);
+    if (player->has_treasure) {
+        printf("Je draagt de schat!\n");
+    }
+}
+
+void print_doors(Room* room) {
+    printf("\nDeuren naar: ");
+    for (int i = 0; i < room->num_doors; i++) {
+        printf("%d ", room->doors[i]->id);
+    }
+    printf("\n");
+}
+
