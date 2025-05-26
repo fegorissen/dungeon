@@ -469,3 +469,77 @@ void print_main_menu() {
     printf("4. Schat pakken (als gevonden)\n");
     printf("5. Stoppen\n");
 }
+
+void free_dungeon(Dungeon* dungeon) {
+    for (int i = 0; i < dungeon->num_rooms; i++) {
+        switch(dungeon->rooms[i]->content.type) {
+            case MONSTER:
+                free(dungeon->rooms[i]->content.content.monster);
+                break;
+            case ITEM:
+                free(dungeon->rooms[i]->content.content.item);
+                break;
+            default:
+                break;
+        }
+        free(dungeon->rooms[i]->doors);
+        free(dungeon->rooms[i]);
+    }
+    free(dungeon->rooms);
+    free(dungeon);
+}
+
+int main() {
+    srand(time(NULL));
+    
+    printf("=== Dungeon Adventure ===\n");
+    int num_rooms = get_user_input("Hoeveel kamers moeten er in de dungeon zijn? (min 3): ", 3, 20);
+    
+    Dungeon* dungeon = generate_dungeon(num_rooms);
+    populate_rooms(dungeon);
+    
+    // Toon startkamer
+    print_room_description(dungeon->entrance);
+    
+    bool playing = true;
+    while (playing && dungeon->player.hp > 0 && !dungeon->player.has_treasure) {
+        print_main_menu();
+        int choice = get_user_input("Wat wil je doen? ", 1, 5);
+        
+        switch(choice) {
+            case 1:
+                move_player(dungeon);
+                break;
+            case 2:
+                if (dungeon->rooms[dungeon->player.current_room_id]->content.type == MONSTER) {
+                    if (!handle_monster_encounter(dungeon)) {
+                        playing = false;
+                    }
+                } else if (dungeon->rooms[dungeon->player.current_room_id]->content.type == ITEM) {
+                    handle_item_pickup(dungeon);
+                } else {
+                    printf("Er is hier niets om op te ruimen.\n");
+                }
+                break;
+            case 3:
+                print_player_status(&dungeon->player);
+                break;
+            case 4:
+                handle_treasure(dungeon);
+                break;
+            case 5:
+                playing = false;
+                break;
+        }
+    }
+    
+    if (dungeon->player.has_treasure) {
+        printf("\n*** Gefeliciteerd! Je hebt de schat gevonden en gewonnen! ***\n");
+    } else if (dungeon->player.hp <= 0) {
+        printf("\n*** Helaas, je hebt het niet overleefd... ***\n");
+    }
+    
+    free_dungeon(dungeon);
+    printf("Bedankt voor het spelen!\n");
+    return 0;
+}
