@@ -97,7 +97,7 @@ void move_player(Dungeon* dungeon);
 void free_dungeon(Dungeon* dungeon);
 int get_user_input(const char* prompt, int min, int max);
 Monster* create_monster(MonsterType type);
-Item* create_item(ItemType type);
+Item* create_item();
 
 // Implementatie
 Room* create_room(int id, int max_doors) {
@@ -180,6 +180,7 @@ bool is_already_connected(Room* room1, Room* room2) {
     }
     return false;
 }
+
 Dungeon* generate_dungeon(int num_rooms) {
     if (num_rooms <= 0) return NULL;
 
@@ -345,6 +346,7 @@ bool handle_monster_encounter(Dungeon* dungeon) {
     }
     return true;
 }
+
 void handle_item_pickup(Dungeon* dungeon) {
     Room* current = dungeon->rooms[dungeon->player.current_room_id];
     
@@ -385,6 +387,7 @@ void handle_item_pickup(Dungeon* dungeon) {
     free(item);
     current->content.type = EMPTY;
 }
+
 void handle_treasure(Dungeon* dungeon) {
     Room* current = dungeon->rooms[dungeon->player.current_room_id];
     
